@@ -1,0 +1,64 @@
+name:                tinybasic
+version:             0.0.0.0
+synopsis:            "TinyBASIC machine: CPU core and serial IO"
+homepage:            https://github.com/gergoerdi/clash-tinybasic
+license:             MIT
+author:              Gergő Érdi
+maintainer:          gergo@erdi.hu
+copyright:           2020 Gergő Érdi
+category:            Hardware
+
+dependencies:
+  - base >= 4.7 && < 5
+  - clash-prelude
+  - clash-ghc
+  - ghc-typelits-natnormalise
+  - ghc-typelits-extra
+  - ghc-typelits-knownnat
+
+  - mtl
+  - transformers
+  - dependent-map
+  - dependent-sum
+  - singletons
+
+# Anything that Clash uses by default should go here
+default-extensions:
+  - BinaryLiterals
+  - ConstraintKinds
+  - DataKinds
+  - DeriveAnyClass
+  - DeriveGeneric
+  - DeriveLift
+  - DerivingStrategies
+  - ExplicitForAll
+  - ExplicitNamespaces
+  - FlexibleContexts
+  - FlexibleInstances
+  - KindSignatures
+  - MagicHash
+  - MonoLocalBinds
+  - NoImplicitPrelude
+  - NoStarIsType
+  - NoStrictData
+  - NoStrict
+  - QuasiQuotes
+  - ScopedTypeVariables
+  - TemplateHaskellQuotes
+  - TemplateHaskell
+  - TypeApplications
+  - TypeFamilies
+  - TypeOperators
+
+ghc-options:
+  -fexpose-all-unfoldings -fno-worker-wrapper
+  -fplugin GHC.TypeLits.KnownNat.Solver
+  -fplugin GHC.TypeLits.Normalise
+  -fplugin GHC.TypeLits.Extra.Solver
+
+source-dirs:
+  - src
+
+executables:
+  foo:
+    main: foo.hs
