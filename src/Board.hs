@@ -4,7 +4,7 @@ module Board where
 import Clash.Prelude hiding (rom)
 import Clash.Annotations.TH
 
-import RetroClash.Utils
+import RetroClash.Utils (withEnableGen)
 import RetroClash.Port
 import RetroClash.Memory
 

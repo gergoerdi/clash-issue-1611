@@ -6,7 +6,6 @@
 module RetroClash.Memory where
 
 import Clash.Prelude
-import RetroClash.Utils
 import RetroClash.Port
 
 import Data.Kind
@@ -20,21 +19,21 @@ import Data.Dependent.Sum as DSum
 import Data.GADT.Compare
 import Type.Reflection
 
-data Component {- s -} (addr :: Type) = Component (TypeRep addr) Int
+data Component (addr :: Type) = Component (TypeRep addr) Int
 
-instance GEq (Component {- s -}) where
+instance GEq Component where
     geq (Component a _) (Component b _) = geq a b
 
-instance GCompare (Component {- s -}) where
+instance GCompare Component where
     gcompare (Component a _) (Component b _) = gcompare a b
 
 newtype FanIn dom a = FanIn{ getFanIn :: Signal dom `Ap` First a }
     deriving newtype (Semigroup, Monoid)
 
-newtype AddrMap {- s -} dom = AddrMap{ addrMap :: DMap (Component {-s-}) (FanIn dom) }
+newtype AddrMap dom = AddrMap{ addrMap :: DMap Component (FanIn dom) }
     deriving newtype (Monoid)
 
-instance Semigroup (AddrMap {- s -} dom) where
+instance Semigroup (AddrMap dom) where
     AddrMap map1 <> AddrMap map2 = AddrMap $ unionWithKey (const mappend) map1 map2
 
 newtype Susp0 dom dat addr = Susp0{ unSusp0 :: Signal dom (Maybe addr) -> Signal dom (Maybe dat) }
@@ -141,7 +140,7 @@ toRead susps conns = go susps
 readWrite
     :: (Typeable addr')
     => (Signal dom (Maybe addr') -> Signal dom (Maybe dat) -> (Signal dom (Maybe dat), a))
-    -> Addressing {- s -} dom addr dat '[a] (Component {- s -} addr')
+    -> Addressing dom addr dat '[a] (Component addr')
 readWrite mkComponent = do
     handle <- Fresh
     wr <- WR
@@ -156,7 +155,7 @@ readWrite mkComponent = do
 readWrite_
     :: (Typeable addr')
     => (Signal dom (Maybe addr') -> Signal dom (Maybe dat) -> (Signal dom (Maybe dat)))
-    -> Addressing {- s -} dom addr dat '[] (Component {- s -} addr')
+    -> Addressing dom addr dat '[] (Component addr')
 readWrite_ mkComponent = do
     handle <- Fresh
     wr <- WR
@@ -174,7 +173,7 @@ type Port_ dom addr dat = Signal dom (Maybe (PortCommand addr dat)) -> Signal do
 port
     :: (HiddenClockResetEnable dom, Typeable addr', NFDataX dat)
     => Port dom addr' dat a
-    -> Addressing {- s -} dom addr dat '[a] (Component {- s -} addr')
+    -> Addressing dom addr dat '[a] (Component addr')
 port mkPort = readWrite $ \addr wr ->
     let (read, x) = mkPort $ portFromAddr addr wr
     in (delay Nothing read, x)
@@ -183,39 +182,39 @@ romFromFile
     :: (HiddenClockResetEnable dom, 1 <= n, BitPack dat)
     => SNat n
     -> FilePath
-    -> Addressing {- s -} dom addr dat '[] (Component {- s -} (Index n))
+    -> Addressing dom addr dat '[] (Component (Index n))
 romFromFile size@SNat fileName = readWrite_ $ \addr wr ->
     fmap (Just . unpack) $ romFilePow2 fileName (maybe 0 bitCoerce <$> addr)
 
 ram0
     :: (HiddenClockResetEnable dom, 1 <= n, NFDataX dat, Num dat)
     => SNat n
-    -> Addressing {- s -} dom addr dat '[] (Component {- s -} (Index n))
+    -> Addressing dom addr dat '[] (Component (Index n))
 ram0 size@SNat = readWrite_ $ \addr wr ->
     fmap Just $ blockRam1 ClearOnReset size 0 (fromMaybe 0 <$> addr) (liftA2 (,) <$> addr <*> wr)
 
 
 matchAddr
     :: (addr -> Maybe addr')
-    -> Addressing {- s -} dom addr' dat ts a
-    -> Addressing {- s -} dom addr dat ts a
+    -> Addressing dom addr' dat ts a
+    -> Addressing dom addr dat ts a
 matchAddr = Match
 
 matchLeft
-    :: Addressing {- s -} dom addr1 dat ts a
-    -> Addressing {- s -} dom (Either addr1 addr2) dat ts a
+    :: Addressing dom addr1 dat ts a
+    -> Addressing dom (Either addr1 addr2) dat ts a
 matchLeft = matchAddr $ either Just (const Nothing)
 
 matchRight
-    :: Addressing {- s -} dom addr2 dat ts a
-    -> Addressing {- s -} dom (Either addr1 addr2) dat ts a
+    :: Addressing dom addr2 dat ts a
+    -> Addressing dom (Either addr1 addr2) dat ts a
 matchRight = matchAddr $ either (const Nothing) Just
 
 from
     :: forall addr' s dom addr dat ts a. (Integral addr, Ord addr, Integral addr', Bounded addr')
     => addr
-    -> Addressing {- s -} dom addr' dat ts a
-    -> Addressing {- s -} dom addr dat ts a
+    -> Addressing dom addr' dat ts a
+    -> Addressing dom addr dat ts a
 from base = matchAddr $ \addr -> do
     guard $ addr >= base
     let offset = addr - base
@@ -225,8 +224,8 @@ from base = matchAddr $ \addr -> do
     lim = fromIntegral (maxBound :: addr')
 
 connect
-    :: Component {- s -} addr
-    -> Addressing {- s -} dom addr dat '[] ()
+    :: Component addr
+    -> Addressing dom addr dat '[] ()
 connect = Connect
 
 fanInMaybe :: Signal dom (Maybe a) -> FanIn dom a
