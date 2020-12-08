@@ -6,7 +6,6 @@
 module RetroClash.Memory where
 
 import Clash.Prelude
-import RetroClash.Port
 
 import Data.Kind
 import Data.Singletons.Prelude.List (type (++))
@@ -167,17 +166,6 @@ readWrite_ mkComponent = do
     (=<<) = flip (>>=)
     m >> n = Bind m (const n)
 
-type Port dom addr dat a = Signal dom (Maybe (PortCommand addr dat)) -> (Signal dom (Maybe dat), a)
-type Port_ dom addr dat = Signal dom (Maybe (PortCommand addr dat)) -> Signal dom (Maybe dat)
-
-port
-    :: (HiddenClockResetEnable dom, Typeable addr', NFDataX dat)
-    => Port dom addr' dat a
-    -> Addressing dom addr dat '[a] (Component addr')
-port mkPort = readWrite $ \addr wr ->
-    let (read, x) = mkPort $ portFromAddr addr wr
-    in (delay Nothing read, x)
-
 romFromFile
     :: (HiddenClockResetEnable dom, 1 <= n, BitPack dat)
     => SNat n
@@ -199,16 +187,6 @@ matchAddr
     -> Addressing dom addr' dat ts a
     -> Addressing dom addr dat ts a
 matchAddr = Match
-
-matchLeft
-    :: Addressing dom addr1 dat ts a
-    -> Addressing dom (Either addr1 addr2) dat ts a
-matchLeft = matchAddr $ either Just (const Nothing)
-
-matchRight
-    :: Addressing dom addr2 dat ts a
-    -> Addressing dom (Either addr1 addr2) dat ts a
-matchRight = matchAddr $ either (const Nothing) Just
 
 from
     :: forall addr' s dom addr dat ts a. (Integral addr, Ord addr, Integral addr', Bounded addr')
